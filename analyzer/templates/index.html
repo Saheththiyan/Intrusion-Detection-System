@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="summary-row">
+  <a class="stat-card stat-all {{ 'active' if not active_severity }}" href="{{ url_for('index', status=active_status) }}">
+    <span class="stat-value">{{ counts.values() | sum }}</span>
+    <span class="stat-label">All alerts</span>
+  </a>
+  {% for sev in severity_order %}
+  <a class="stat-card stat-{{ sev }} {{ 'active' if active_severity == sev }}"
+     href="{{ url_for('index', severity=sev, status=active_status) }}">
+    <span class="stat-value">{{ counts[sev] }}</span>
+    <span class="stat-label">{{ sev }}</span>
+  </a>
+  {% endfor %}
+</section>
+
+<div class="toolbar">
+  <div class="status-tabs">
+    {% for s in ['all', 'new', 'reviewed', 'dismissed'] %}
+    <a class="tab {{ 'active' if active_status == s }}"
+       href="{{ url_for('index', severity=active_severity, status=s) }}">{{ s }}</a>
+    {% endfor %}
+  </div>
+  <div class="raw-count">{{ total_raw_events }} raw Suricata events condensed into {{ counts.values() | sum }} alert groups</div>
+</div>
+
+{% if alerts %}
+<table class="alert-table">
+  <thead>
+    <tr>
+      <th>Severity</th>
+      <th>Signature</th>
+      <th>What happened</th>
+      <th>Source → Destination</th>
+      <th>Count</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in alerts %}
+    <tr onclick="window.location='{{ url_for('detail', group_key=a.group_key) }}'">
+      <td><span class="badge badge-{{ a.llm_severity }}">{{ a.llm_severity }}</span></td>
+      <td class="signature-cell">{{ a.signature }}</td>
+      <td class="summary-cell">{{ a.llm_summary }}</td>
+      <td class="endpoints-cell">
+        <code>{{ a.src_ip }}</code>
+        <span class="arrow">→</span>
+        <code>{{ a.dest_hostname or a.dest_ip }}:{{ a.dest_port }}</code>
+      </td>
+      <td>{{ a.count }}</td>
+      <td><span class="status status-{{ a.status }}">{{ a.status }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">No alerts match this filter yet. Run <code>python analyzer/cli.py</code> to enrich alerts from <code>logs/eve.json</code>.</p>
+{% endif %}
+
+{% endblock %}
