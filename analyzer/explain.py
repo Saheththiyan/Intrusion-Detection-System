@@ -15,7 +15,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 EFFORT = os.environ.get("GEMINI_EFFORT", "medium")
 
 # Gemini has no named effort tiers -- it takes a thinking-token budget
@@ -88,7 +88,11 @@ def explain_group(client: genai.Client, group) -> dict:
         contents=_build_user_prompt(group),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,
-            max_output_tokens=1024,
+            # Thinking tokens are drawn from the same max_output_tokens budget
+            # as the answer, so this needs headroom above the thinking budget
+            # below or the JSON gets truncated mid-object and response.parsed
+            # comes back None.
+            max_output_tokens=4096,
             response_mime_type="application/json",
             response_schema=AlertExplanation,
             thinking_config=types.ThinkingConfig(
@@ -96,4 +100,9 @@ def explain_group(client: genai.Client, group) -> dict:
             ),
         ),
     )
+    if response.parsed is None:
+        raise ValueError(
+            f"Gemini returned no parsed output (finish_reason="
+            f"{response.candidates[0].finish_reason})"
+        )
     return response.parsed.model_dump()

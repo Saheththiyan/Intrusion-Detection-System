@@ -12,14 +12,15 @@ from __future__ import annotations
 import os
 import sys
 
-from google import genai
 from dotenv import load_dotenv
+
+load_dotenv()
+
+from google import genai
 
 import db
 import explain
 from ingest import load_alert_groups
-
-load_dotenv()
 
 DEFAULT_EVE_PATH = os.path.join(os.path.dirname(__file__), "..", "logs", "eve.json")
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "alerts.db"))
